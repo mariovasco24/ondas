@@ -7,6 +7,9 @@ on:
   push:
     tags: ['v*']
 
+permissions:
+  contents: write
+
 jobs:
   android:
     runs-on: ubuntu-24.04
@@ -83,3 +86,18 @@ jobs:
             android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 30
+
+      # Borrador privado de "Release" con los archivos sueltos (solo lo ve el dueño del repo),
+      # para descargar el .aab o el .apk directo sin descomprimir nada.
+      - name: Borrador de release
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          mkdir -p out
+          cp android/app/build/outputs/bundle/release/app-release.aab "out/onda-radio-$VERSION-$VERSION_CODE.aab"
+          cp android/app/build/outputs/apk/release/app-release.apk "out/onda-radio-$VERSION-$VERSION_CODE.apk"
+          gh release create "v$VERSION-build$VERSION_CODE" out/* --draft --target "$GITHUB_SHA" \
+            --title "Onda Radio $VERSION (versionCode $VERSION_CODE)" \
+            --notes "Archivos para Google Play (.aab) y para instalar directo en Android (.apk)."
