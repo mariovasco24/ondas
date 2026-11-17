@@ -101,3 +101,19 @@ jobs:
           gh release create "v$VERSION-build$VERSION_CODE" out/* --draft --target "$GITHUB_SHA" \
             --title "Onda Radio $VERSION (versionCode $VERSION_CODE)" \
             --notes "Archivos para Google Play (.aab) y para instalar directo en Android (.apk)."
+
+      # Copia temporal del .aab en la rama "play-upload" para subirlo a Play Console desde el navegador.
+      # Después de subirlo, la rama se puede borrar.
+      - name: Copia para Play Console
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TMP=$(mktemp -d)
+          cp out/*.aab "$TMP/onda-radio.aab"
+          cd "$TMP"
+          git init -q -b play-upload
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add onda-radio.aab
+          git commit -q -m "Onda Radio $VERSION ($VERSION_CODE) para Play Console"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" play-upload
