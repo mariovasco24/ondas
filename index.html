@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0e12">
+<title>Ondas — Radio del mundo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+<style>
+/* Prototipo "Ondas": feed tipo swipe + filtros (mood, país, género) + búsqueda + favoritos.
+   Los anuncios son marcadores de posición; en la app real se reemplazan por AdMob
+   (ver objeto ADS en el script). */
+:root{--bg:#0d0e12;--panel:#16171c;--ink:#f4f1ea;--muted:#a9a6a0;--acc:#ff5a4e;--banner:calc(64px + env(safe-area-inset-bottom));font-family:Sora,system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box;margin:0;min-width:0}
+html,body{height:100%;background:var(--bg);color:var(--ink);overflow:hidden;-webkit-tap-highlight-color:transparent}
+button,input{font:inherit;color:inherit}
+button{border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.hidden{display:none!important}
+
+/* Barra superior */
+.top{position:fixed;inset:0 0 auto;z-index:5;padding:calc(env(safe-area-inset-top) + 8px) 12px 14px;background:linear-gradient(#0d0e12f2 60%,#0d0e1200)}
+.tabs{display:flex;gap:4px;align-items:center}
+.tabs button{padding:10px 14px;border-radius:99px;font-weight:600;color:var(--muted);min-height:44px}
+.tabs button.on{color:var(--ink);background:#ffffff1a}
+#btnSearch{margin-left:auto;width:44px;padding:0;display:grid;place-items:center}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:8px 14px;border-radius:99px;background:#ffffff14;font-size:14px;min-height:38px;white-space:nowrap}
+.chip.on{background:var(--ink);color:#111;font-weight:600}
+.sep{flex:none;width:1px;background:#ffffff2a;margin:6px 2px}
+
+/* Feed */
+.feed{position:fixed;inset:0 0 var(--banner);overflow-y:auto;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none}
+.feed::-webkit-scrollbar{display:none}
+.card{height:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:150px 24px 28px;text-align:center;position:relative;overflow:hidden}
+.st{background:radial-gradient(120% 75% at 50% 32%,hsl(var(--h) 65% 36%),hsl(var(--h) 55% 13%) 68%,#0d0e12)}
+.art{width:min(44vw,190px);aspect-ratio:1;border-radius:28px;background:hsl(var(--h) 45% 22%);display:grid;place-items:center;overflow:hidden;box-shadow:0 24px 60px #0009,inset 0 1px 0 #ffffff30;position:relative}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff;padding:14%}
+.ini{font-size:54px;font-weight:800;opacity:.85}
+.card h2{font-size:clamp(24px,7vw,36px);line-height:1.08;font-weight:800;text-wrap:balance;max-width:18ch;overflow-wrap:anywhere}
+.where{color:#ffffffcc;font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:320px}
+.tags span{font-size:13px;padding:4px 10px;border-radius:99px;background:#00000038;color:#ffffffd9}
+.ctrls{display:flex;gap:22px;align-items:center;margin-top:8px}
+.play{width:78px;height:78px;border-radius:50%;background:var(--ink);color:#111;font-size:28px;display:grid;place-items:center;box-shadow:0 12px 30px #0007}
+.fav,.ghost{width:52px;height:52px;border-radius:50%;background:#00000040;font-size:22px;display:grid;place-items:center}
+.fav.on{color:var(--acc)}
+.eq{display:flex;gap:4px;height:22px;align-items:flex-end;opacity:0;transition:opacity .3s}
+.eq i{width:4px;background:var(--ink);border-radius:2px;height:30%}
+.playing .eq{opacity:1}
+.playing .eq i{animation:eq .9s ease-in-out infinite alternate}
+.eq i:nth-child(2){animation-delay:-.3s!important}.eq i:nth-child(3){animation-delay:-.6s!important}.eq i:nth-child(4){animation-delay:-.15s!important}.eq i:nth-child(5){animation-delay:-.45s!important}
+@keyframes eq{to{height:100%}}
+@media (prefers-reduced-motion:reduce){.playing .eq i{animation:none;height:70%}}
+.fail-msg{display:none;font-size:14px;color:#ffd2cc;background:#00000055;padding:8px 14px;border-radius:12px}
+.fail .fail-msg{display:block}
+.hint{position:absolute;bottom:14px;font-size:13px;color:#ffffff99}
+.msg{height:100%;display:grid;place-items:center;text-align:center;padding:150px 24px 24px;color:var(--muted)}
+.msg button{margin-top:14px}
+
+/* Anuncio nativo dentro del feed */
+.ad{background:linear-gradient(160deg,#20222b,#121318)}
+.adtag{position:absolute;top:150px;left:20px;font-size:12px;font-weight:600;background:#f4c430;color:#111;padding:3px 9px;border-radius:6px}
+.adbox{width:min(78vw,320px);aspect-ratio:4/3;border:2px dashed #ffffff40;border-radius:18px;display:grid;place-items:center;align-content:center;gap:6px;color:var(--muted);font-weight:600;padding:16px}
+.adbox small{font-weight:400;font-size:13px}
+.ad p{color:var(--muted);font-size:14px;max-width:30ch}
+.btn{min-height:44px;padding:10px 20px;border-radius:99px;background:var(--ink);color:#111;font-weight:600}
+.btn.alt{background:#ffffff1a;color:var(--ink)}
+
+/* Banner inferior */
+#banner{position:fixed;left:0;right:0;bottom:0;height:var(--banner);padding:7px 10px calc(7px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;background:var(--panel);border-top:1px solid #ffffff14;z-index:6}
+.bad{flex:1;height:50px;border:1px dashed #ffffff40;border-radius:8px;display:grid;place-items:center;font-size:13px;color:var(--muted)}
+#banner .btn{font-size:13px;padding:8px 12px;white-space:nowrap}
+#noAds{flex:1;font-size:14px;color:var(--muted)}
+
+/* Vista Favoritos */
+.list{position:fixed;inset:0 0 var(--banner);overflow-y:auto;padding:110px 12px 90px}
+.row{display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;width:100%;text-align:left;min-height:64px}
+.row:hover{background:#ffffff0d}
+.row .art{width:48px;border-radius:12px;box-shadow:none;flex:none}
+.row .ini{font-size:18px}
+.row b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row small{color:var(--muted);font-size:13px}
+.row .grow{flex:1}
+.row.now b{color:var(--acc)}
+.empty{color:var(--muted);text-align:center;padding:60px 20px}
+#np{position:fixed;left:10px;right:10px;bottom:calc(var(--banner) + 10px);z-index:6;display:flex;align-items:center;gap:12px;background:#24262e;border-radius:16px;padding:8px 8px 8px 14px;box-shadow:0 10px 30px #0008}
+#np b{flex:1;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#np .play{width:44px;height:44px;font-size:16px;box-shadow:none}
+
+/* Hojas y overlays */
+.ov{position:fixed;inset:0;z-index:20;background:#000c;display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:560px;max-height:85dvh;background:var(--panel);border-radius:22px 22px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
+.sheet h3{font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.sheet .x{width:44px;height:44px;font-size:22px}
+.sheet input{width:100%;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid #ffffff22;background:#0d0e12}
+.sheet .res{overflow-y:auto;flex:1;min-height:120px}
+.sheet p{color:var(--muted);font-size:15px}
+.full{align-items:center}
+.adfull{width:min(92vw,420px);background:#1c1e25;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center}
+.adfull .adbox{width:100%;aspect-ratio:9/12;max-height:55dvh}
+.adfull .top-row{width:100%;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+#start{position:fixed;inset:0;z-index:30;background:radial-gradient(90% 60% at 50% 40%,#3a1715,#0d0e12);display:grid;place-items:center;text-align:center;padding:24px}
+#start h1{font-size:clamp(34px,10vw,52px);line-height:1.05;font-weight:800;margin-bottom:10px}
+#start p{color:var(--muted);margin-bottom:26px;max-width:30ch;margin-inline:auto}
+#start .play{margin:0 auto;width:96px;height:96px;font-size:34px}
+.toast{position:fixed;left:50%;bottom:calc(var(--banner) + 16px);transform:translateX(-50%);background:var(--ink);color:#111;padding:10px 16px;border-radius:12px;font-size:14px;z-index:25;max-width:90vw;text-align:center}
+</style>
+</head>
+<body>
+
+<div id="start">
+  <div>
+    <h1>Ondas</h1>
+    <p>Miles de emisoras de todo el mundo. Desliza hacia arriba para cambiar de emisora.</p>
+    <button class="play" id="startBtn" aria-label="Encender la radio">▶</button>
+  </div>
+</div>
+
+<header class="top">
+  <nav class="tabs">
+    <button data-tab="feed" class="on">Descubrir</button>
+    <button data-tab="favs">Favoritos</button>
+    <button id="btnSearch" aria-label="Buscar emisoras">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    </button>
+  </nav>
+  <div class="chips" id="chips"></div>
+</header>
+
+<main id="feed" class="feed" aria-live="polite"></main>
+<section id="favs" class="list hidden"></section>
+<div id="np" class="hidden"><b id="npName"></b><button class="play" id="npBtn" aria-label="Reproducir o pausar">▶</button></div>
+
+<footer id="banner">
+  <div class="bad" id="bannerAd">Banner · AdMob 320×50</div>
+  <span id="noAds" class="hidden"></span>
+  <button class="btn" id="rewardBtn">🎁 2 h sin anuncios</button>
+</footer>
+
+<div id="ov" class="ov hidden"></div>
+<audio id="audio" preload="none"></audio>
+
+<script>
+{
+/* ===== Configuración de anuncios (se mapea 1:1 a AdMob en la app real) ===== */
+const ADS = {
+  nativeEvery: 8,                     // 1 anuncio nativo cada 8 emisoras del feed
+  interstitialMinGapMs: 4 * 60e3,     // máximo 1 intersticial cada 4 minutos
+  interstitialAfterChanges: 2,        // y solo a partir del 2.º cambio de filtro
+  interstitialSecs: 5,
+  rewardedSecs: 6,
+  rewardedHours: 2,                   // premio: 2 h sin anuncios
+  duckVolume: 0.2                     // la radio NUNCA se corta: solo baja el volumen
+};
+
+const API = ['https://all.api.radio-browser.info','https://de1.api.radio-browser.info','https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info','https://de2.api.radio-browser.info'];
+const MOODS = [
+  {id:'top',   label:'🔥 Populares'},
+  {id:'near',  label:'📍 Cerca de mí'},
+  {id:'work',  label:'💻 Trabajar', tags:['lofi','chillout','jazz']},
+  {id:'party', label:'🎉 Fiesta',   tags:['dance','reggaeton','electronic']},
+  {id:'sleep', label:'😴 Dormir',   tags:['ambient','classical','relax']},
+  {id:'news',  label:'📰 Noticias', tags:['news','talk']},
+  {id:'random',label:'🎲 Sorpréndeme'}
+];
+const GENRES = {salsa:'Salsa',vallenato:'Vallenato',cumbia:'Cumbia',reggaeton:'Reggaetón',rock:'Rock',pop:'Pop',jazz:'Jazz',classical:'Clásica',electronic:'Electrónica','hip hop':'Hip hop'};
+const PAGE = 30;
+
+const $ = s => document.querySelector(s);
+const feedEl = $('#feed'), favsEl = $('#favs'), ov = $('#ov'), audio = $('#audio');
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const flag = cc => cc && cc.length === 2 ? String.fromCodePoint(...[...cc.toUpperCase()].map(c => 127397 + c.charCodeAt())) : '🌐';
+let regionNames; try { regionNames = new Intl.DisplayNames(['es'], {type:'region'}); } catch(e) {}
+const countryName = s => { try { return regionNames && s.countrycode ? regionNames.of(s.countrycode.toUpperCase()) : (s.country || ''); } catch(e) { return s.country || ''; } };
+const hue = t => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const initials = n => String(n).replace(/[^\p{L}\p{N} ]/gu,'').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase() || '♪';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+};
+const userCC = ((navigator.language || 'es-CO').split('-')[1] || 'CO').toUpperCase();
+
+/* ===== Estado ===== */
+let filter = {mood:'top', genre:null, country:null, search:null};
+let stations = [], seen = new Set(), offset = 0, loading = false, exhausted = false;
+let cur = null, visibleId = null, started = false, hls = null, loadTimer = null;
+let favs = store.get('ondas.favs', []);
+let adFreeUntil = store.get('ondas.adFreeUntil', 0);
+let lastInter = 0, filterChanges = 0, stationsSinceAd = 0;
+const adFree = () => Date.now() < adFreeUntil;
+
+/* ===== API ===== */
+async function api(path, params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  for (const base of API) {
+    try {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+      const r = await fetch(`${base}${path}?${qs}`, {signal: ctrl.signal});
+      clearTimeout(t);
+      if (r.ok) return await r.json();
+    } catch(e) {}
+  }
+  throw new Error('Sin conexión con Radio Browser');
+}
+function baseParams() {
+  const p = {limit: PAGE, offset, hidebroken: 'true', is_https: 'true', order: 'clickcount', reverse: 'true'};
+  if (filter.country) p.countrycode = filter.country;
+  if (filter.genre) p.tag = filter.genre;
+  if (filter.mood === 'near' && !filter.country) p.countrycode = userCC;
+  if (filter.mood === 'random') p.order = 'random';
+  if (filter.search) p.name = filter.search;
+  return p;
+}
+async function fetchPage() {
+  const mood = MOODS.find(m => m.id === filter.mood);
+  let list;
+  if (mood && mood.tags && !filter.genre && !filter.search) {
+    const parts = await Promise.all(mood.tags.map(tag => api('/json/stations/search', {...baseParams(), tag, limit: Math.ceil(PAGE / mood.tags.length) + 4}).catch(() => [])));
+    list = parts.flat().sort(() => Math.random() - .5);
+  } else {
+    list = await api('/json/stations/search', baseParams());
+  }
+  offset += PAGE;
+  if (!list.length) exhausted = true;
+  return list.filter(s => (s.url_resolved || s.url || '').startsWith('https') && !seen.has(s.stationuuid) && seen.add(s.stationuuid));
+}
+
+/* ===== Render del feed ===== */
+function stationCard(s) {
+  const tags = (s.tags || '').split(',').filter(Boolean).slice(0, 4);
+  const place = [flag(s.countrycode) + ' ' + esc(countryName(s)), esc(s.state)].filter(Boolean).join(' · ');
+  const isFav = favs.some(f => f.stationuuid === s.stationuuid);
+  return `<section class="card st" data-id="${esc(s.stationuuid)}" style="--h:${hue(s.name)}">
+    <div class="art"><span class="ini">${esc(initials(s.name))}</span>${s.favicon ? `<img src="${esc(s.favicon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</div>
+    <h2>${esc(s.name.trim())}</h2>
+    <p class="where">${place}</p>
+    ${tags.length ? `<div class="tags">${tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+    <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="ctrls">
+      <button class="fav ${isFav ? 'on' : ''}" aria-label="Guardar en favoritos">${isFav ? '♥' : '♡'}</button>
+      <button class="play" aria-label="Reproducir o pausar">▶</button>
+      <button class="ghost next" aria-label="Siguiente emisora">⌄</button>
+    </div>
+    <p class="fail-msg">No disponible · pasando a la siguiente…</p>
+  </section>`;
+}
+const adCard = () => `<section class="card ad" data-ad="1">
+    <span class="adtag">Anuncio</span>
+    <div class="adbox">Anuncio nativo<small>AdMob · Native Advanced</small></div>
+    <p>La radio sigue sonando mientras ves esto. Desliza para continuar.</p>
+    <button class="btn alt">Más información</button>
+  </section>`;
+
+const io = new IntersectionObserver(entries => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    const el = e.target;
+    if (el.dataset.id) {
+      visibleId = el.dataset.id;
+      const s = stations.find(x => x.stationuuid === visibleId);
+      if (started && s) play(s);
+    }
+    const cards = feedEl.querySelectorAll('.card');
+    if ([...cards].indexOf(el) >= cards.length - 4) loadMore();
+  }
+}, {root: feedEl, threshold: .6});
+
+function append(list) {
+  let html = '';
+  for (const s of list) {
+    stations.push(s);
+    html += stationCard(s);
+    if (++stationsSinceAd >= ADS.nativeEvery && !adFree()) { html += adCard(); stationsSinceAd = 0; }
+  }
+  const tmp = document.createElement('div'); tmp.innerHTML = html;
+  const nodes = [...tmp.children];
+  feedEl.querySelector('.msg')?.remove();
+  nodes.forEach(n => { feedEl.appendChild(n); io.observe(n); });
+  if (started && !cur && stations.length) { visibleId = visibleId || stations[0].stationuuid; const s = stations.find(x => x.stationuuid === visibleId); s && play(s); }
+  updateUI();
+}
+function rerender() { // p. ej. tras ganar el premio: mismo feed, sin anuncios
+  const keep = visibleId; const list = stations.slice();
+  stations = []; stationsSinceAd = 0; io.disconnect(); feedEl.innerHTML = '';
+  append(list);
+  const el = keep && feedEl.querySelector(`[data-id="${CSS.escape(keep)}"]`);
+  if (el) feedEl.scrollTop = el.offsetTop;
+}
+function message(text, withReset) {
+  feedEl.insertAdjacentHTML('beforeend', `<div class="msg"><div><p>${esc(text)}</p>${withReset ? '<button class="btn alt" data-reset="1">Ver populares</button>' : ''}</div></div>`);
+}
+async function loadMore(reset) {
+  if (reset) { stations = []; seen = new Set(); offset = 0; exhausted = false; stationsSinceAd = 0; io.disconnect(); feedEl.innerHTML = ''; feedEl.scrollTop = 0; }
+  if (loading || exhausted) return;
+  loading = true;
+  if (!stations.length) message('Sintonizando…');
+  try {
+    const list = await fetchPage();
+    if (list.length) append(list);
+    else if (!stations.length) { feedEl.innerHTML = ''; message('No encontramos emisoras con ese filtro.', true); }
+    else if (!exhausted) { loading = false; return loadMore(); }
+  } catch(e) {
+    if (!stations.length) { feedEl.innerHTML = ''; message('No se pudo conectar con el directorio de emisoras. Si lo abriste dentro de la app de Claude, ábrelo en Chrome o Safari.', true); }
+  }
+  loading = false;
+}
+
+/* ===== Reproducción ===== */
+function stopStream() { if (hls) { hls.destroy(); hls = null; } clearTimeout(loadTimer); }
+function play(s) {
+  if (cur && cur.stationuuid === s.stationuuid) { if (audio.paused) audio.play().catch(() => {}); return; }
+  cur = s; stopStream();
+  document.querySelectorAll('.fail').forEach(c => c.classList.remove('fail'));
+  const url = s.url_resolved || s.url;
+  if ((s.hls == 1 || /\.m3u8(\?|$)/i.test(url)) && window.Hls && Hls.isSupported()) {
+    hls = new Hls(); hls.loadSource(url); hls.attachMedia(audio);
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) fail(s); });
+  } else { audio.src = url; }
+  audio.play().catch(err => { if (err && err.name === 'NotAllowedError') toast('Toca ▶ para empezar a escuchar'); });
+  loadTimer = setTimeout(() => { if (audio.paused || audio.readyState < 3) fail(s); }, 12000);
+  setMeta(s);
+  fetch(`${API[0]}/json/url/${encodeURIComponent(s.stationuuid)}`).catch(() => {}); // contador de clics de Radio Browser
+  updateUI();
+}
+function toggle(s) {
+  if (!started) return start();
+  if (cur && cur.stationuuid === s.stationuuid) audio.paused ? audio.play().catch(() => {}) : audio.pause();
+  else play(s);
+}
+function fail(s) {
+  if (!cur || cur.stationuuid !== s.stationuuid) return;
+  stopStream(); audio.removeAttribute('src'); audio.load();
+  const card = feedEl.querySelector(`[data-id="${CSS.escape(s.stationuuid)}"]`);
+  if (card && !favsEl.offsetParent) {
+    card.classList.add('fail');
+    setTimeout(() => { if (visibleId === s.stationuuid) next(card); }, 1500);
+  } else toast('Esta emisora no está disponible ahora');
+  cur = null; updateUI();
+}
+function next(card) {
+  let n = card.nextElementSibling;
+  if (n) feedEl.scrollTo({top: n.offsetTop, behavior: 'smooth'});
+}
+function setMeta(s) {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.metadata = new MediaMetadata({title: s.name.trim(), artist: countryName(s), album: 'Ondas', artwork: s.favicon ? [{src: s.favicon, sizes: '512x512'}] : []});
+    navigator.mediaSession.setActionHandler('nexttrack', () => { const c = feedEl.querySelector(`[data-id="${CSS.escape(s.stationuuid)}"]`); c && next(c); });
+    navigator.mediaSession.setActionHandler('previoustrack', () => { const c = feedEl.querySelector(`[data-id="${CSS.escape(s.stationuuid)}"]`); const p = c?.previousElementSibling; p && feedEl.scrollTo({top: p.offsetTop, behavior: 'smooth'}); });
+  } catch(e) {}
+}
+function updateUI() {
+  const on = cur && !audio.paused;
+  document.querySelectorAll('.card.st').forEach(c => {
+    const me = cur && c.dataset.id === cur.stationuuid && on;
+    c.classList.toggle('playing', !!me);
+    c.querySelector('.play').textContent = me ? '❚❚' : '▶';
+  });
+  favsEl.querySelectorAll('.row').forEach(r => r.classList.toggle('now', !!(cur && r.dataset.id === cur.stationuuid)));
+  const np = $('#np');
+  np.classList.toggle('hidden', !(cur && !favsEl.classList.contains('hidden')));
+  if (cur) { $('#npName').textContent = cur.name.trim(); $('#npBtn').textContent = on ? '❚❚' : '▶'; }
+}
+['playing','pause','play'].forEach(ev => audio.addEventListener(ev, () => { if (ev === 'playing') clearTimeout(loadTimer); updateUI(); }));
+audio.addEventListener('error', () => { if (cur && !hls) fail(cur); });
+
+function start() {
+  started = true; $('#start').classList.add('hidden');
+  const s = stations.find(x => x.stationuuid === visibleId) || stations[0];
+  if (s) play(s);
+}
+
+/* ===== Anuncios ===== */
+function duck(on) { audio.volume = on ? ADS.duckVolume : 1; }
+function showAdOverlay(kind) {
+  const secs = kind === 'rewarded' ? ADS.rewardedSecs : ADS.interstitialSecs;
+  let left = secs, done = false;
+  ov.className = 'ov full';
+  ov.innerHTML = `<div class="adfull" role="dialog" aria-label="Anuncio">
+    <div class="top-row"><span>${kind === 'rewarded' ? 'Video con recompensa' : 'Anuncio'}</span><button class="btn alt" id="adClose" disabled>${left}</button></div>
+    <div class="adbox">${kind === 'rewarded' ? 'Video recompensado' : 'Intersticial'}<small>AdMob · ${kind === 'rewarded' ? 'Rewarded' : 'Interstitial'}</small></div>
+    <p style="color:var(--muted);font-size:14px">${kind === 'rewarded' ? `Míralo completo y escucha ${ADS.rewardedHours} h sin anuncios.` : 'La radio sigue sonando más bajito.'}</p>
+  </div>`;
+  duck(true);
+  const btn = $('#adClose');
+  if (kind === 'rewarded') { btn.disabled = false; btn.textContent = `Saltar (${left})`; }
+  const t = setInterval(() => {
+    left--;
+    if (left <= 0) { clearInterval(t); done = true; btn.disabled = false; btn.textContent = kind === 'rewarded' ? '✓ Listo' : 'Cerrar ✕'; }
+    else btn.textContent = kind === 'rewarded' ? `Saltar (${left})` : left;
+  }, 1000);
+  btn.onclick = () => {
+    clearInterval(t); closeOv(); duck(false);
+    if (kind === 'rewarded') {
+      if (done) { adFreeUntil = Date.now() + ADS.rewardedHours * 3600e3; store.set('ondas.adFreeUntil', adFreeUntil); refreshBanner(); rerender(); toast(`¡Listo! ${ADS.rewardedHours} horas sin anuncios 🎉`); }
+      else toast('Para ganar el premio hay que ver el video completo');
+    }
+  };
+}
+function maybeInterstitial() {
+  filterChanges++;
+  if (adFree() || filterChanges < ADS.interstitialAfterChanges) return;
+  if (Date.now() - lastInter < ADS.interstitialMinGapMs) return;
+  lastInter = Date.now(); showAdOverlay('interstitial');
+}
+function refreshBanner() {
+  const free = adFree();
+  $('#bannerAd').classList.toggle('hidden', free);
+  $('#rewardBtn').classList.toggle('hidden', free);
+  $('#noAds').classList.toggle('hidden', !free);
+  if (free) $('#noAds').textContent = `Sin anuncios hasta las ${new Date(adFreeUntil).toLocaleTimeString('es', {hour:'numeric', minute:'2-digit'})}`;
+}
+setInterval(() => { const was = !$('#noAds').classList.contains('hidden'); refreshBanner(); if (was && !adFree()) rerender(); }, 30e3);
+$('#rewardBtn').onclick = () => showAdOverlay('rewarded');
+
+/* ===== Chips / filtros ===== */
+function renderChips() {
+  const cLabel = filter.country ? `${flag(filter.country)} ${regionNames ? regionNames.of(filter.country) : filter.country}` : '🌎 País';
+  $('#chips').innerHTML =
+    (filter.search ? `<button class="chip on" data-clear="search">🔍 “${esc(filter.search)}” ✕</button><span class="sep"></span>` : '') +
+    MOODS.map(m => `<button class="chip ${filter.mood === m.id && !filter.search ? 'on' : ''}" data-mood="${m.id}">${m.label}</button>`).join('') +
+    `<span class="sep"></span><button class="chip ${filter.country ? 'on' : ''}" data-country="1">${esc(cLabel)} ▾</button><span class="sep"></span>` +
+    Object.entries(GENRES).map(([k, v]) => `<button class="chip ${filter.genre === k ? 'on' : ''}" data-genre="${esc(k)}">${v}</button>`).join('');
+}
+function applyFilter(changes) {
+  Object.assign(filter, changes);
+  renderChips(); showTab('feed'); loadMore(true); maybeInterstitial();
+}
+$('#chips').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.mood) applyFilter({mood: b.dataset.mood, search: null});
+  else if (b.dataset.genre) applyFilter({genre: filter.genre === b.dataset.genre ? null : b.dataset.genre});
+  else if (b.dataset.country) openCountries();
+  else if (b.dataset.clear) applyFilter({search: null});
+};
+
+/* ===== Hojas: país, búsqueda ===== */
+function closeOv() { ov.className = 'ov hidden'; ov.innerHTML = ''; }
+ov.addEventListener('click', e => { if (e.target === ov && !ov.classList.contains('full')) closeOv(); });
+function sheet(title, body) {
+  ov.className = 'ov';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(title)}"><h3>${esc(title)}<button class="x" aria-label="Cerrar">✕</button></h3>${body}</div>`;
+  ov.querySelector('.x').onclick = closeOv;
+}
+const rowHTML = (s, extra = '') => `<button class="row" data-id="${esc(s.stationuuid)}" style="--h:${hue(s.name)}">
+  <span class="art"><span class="ini">${esc(initials(s.name))}</span>${s.favicon ? `<img src="${esc(s.favicon)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</span>
+  <span class="grow"><b>${esc(s.name.trim())}</b><small>${flag(s.countrycode)} ${esc(countryName(s))}</small></span>${extra}</button>`;
+
+let countries = null;
+async function openCountries() {
+  sheet('Elige un país', `<input id="cq" placeholder="Buscar país…" autocomplete="off"><div class="res" id="cres"><p>Cargando…</p></div>`);
+  if (!countries) {
+    try {
+      const raw = await api('/json/countries');
+      const map = {};
+      raw.forEach(c => { const k = (c.iso_3166_1 || '').toUpperCase(); if (k.length === 2) map[k] = (map[k] || 0) + c.stationcount; });
+      countries = Object.entries(map).filter(([, n]) => n >= 15).map(([cc, n]) => ({cc, n, name: regionNames ? regionNames.of(cc) : cc})).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+    } catch(e) { $('#cres') && ($('#cres').innerHTML = '<p>No se pudo cargar la lista.</p>'); return; }
+  }
+  const draw = q => {
+    const n = q.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '');
+    const list = countries.filter(c => c.name.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').includes(n));
+    $('#cres').innerHTML = `<button class="row" data-cc=""><span class="grow"><b>🌎 Todos los países</b></span></button>` +
+      list.map(c => `<button class="row" data-cc="${c.cc}"><span class="grow"><b>${flag(c.cc)} ${esc(c.name)}</b><small>${c.n.toLocaleString('es')} emisoras</small></span></button>`).join('');
+  };
+  if (!$('#cq')) return;
+  draw('');
+  $('#cq').oninput = e => draw(e.target.value);
+  $('#cres').onclick = e => { const b = e.target.closest('[data-cc]'); if (b) { closeOv(); applyFilter({country: b.dataset.cc || null, mood: filter.mood === 'near' ? 'top' : filter.mood}); } };
+}
+
+$('#btnSearch').onclick = () => {
+  sheet('Buscar emisora', `<input id="sq" placeholder="Nombre de la emisora…" autocomplete="off" enterkeyhint="search"><div class="res" id="sres"><p>Escribe al menos 2 letras. Ej.: Caracol, Tropicana, BBC.</p></div>`);
+  const input = $('#sq'); input.focus();
+  let t, results = [];
+  input.oninput = () => {
+    clearTimeout(t);
+    const q = input.value.trim();
+    if (q.length < 2) return;
+    t = setTimeout(async () => {
+      $('#sres').innerHTML = '<p>Buscando…</p>';
+      try {
+        results = (await api('/json/stations/search', {name: q, limit: 40, hidebroken: 'true', is_https: 'true', order: 'clickcount', reverse: 'true'}))
+          .filter(s => (s.url_resolved || s.url || '').startsWith('https'));
+        $('#sres').innerHTML = results.length ? results.map(s => rowHTML(s)).join('') : '<p>Sin resultados.</p>';
+      } catch(e) { $('#sres').innerHTML = '<p>No hay conexión.</p>'; }
+    }, 400);
+  };
+  input.onkeydown = e => { if (e.key === 'Enter' && input.value.trim().length >= 2) { closeOv(); applyFilter({search: input.value.trim()}); } };
+  $('#sres').onclick = e => {
+    const r = e.target.closest('.row'); if (!r) return;
+    const i = results.findIndex(s => s.stationuuid === r.dataset.id);
+    closeOv();
+    Object.assign(filter, {search: input.value.trim()}); renderChips(); showTab('feed');
+    stations = []; seen = new Set(); offset = PAGE; exhausted = true; stationsSinceAd = 0; io.disconnect(); feedEl.innerHTML = ''; feedEl.scrollTop = 0;
+    const list = results.slice(i).concat(results.slice(0, i)); list.forEach(s => seen.add(s.stationuuid));
+    append(list);
+    if (!started) start(); else play(list[0]);
+  };
+};
+
+/* ===== Favoritos ===== */
+function toggleFav(s) {
+  const i = favs.findIndex(f => f.stationuuid === s.stationuuid);
+  if (i >= 0) favs.splice(i, 1);
+  else favs.unshift({stationuuid: s.stationuuid, name: s.name, favicon: s.favicon, countrycode: s.countrycode, country: s.country, url: s.url, url_resolved: s.url_resolved, hls: s.hls, tags: s.tags, state: s.state});
+  store.set('ondas.favs', favs);
+  document.querySelectorAll(`.card[data-id="${CSS.escape(s.stationuuid)}"] .fav`).forEach(b => { const on = i < 0; b.classList.toggle('on', on); b.textContent = on ? '♥' : '♡'; });
+  if (i < 0) toast('Guardada en Favoritos');
+  renderFavs();
+}
+function renderFavs() {
+  favsEl.innerHTML = favs.length
+    ? `<h2 style="font-size:28px;margin:4px 10px 12px">Tus favoritas</h2>` + favs.map(s => rowHTML(s, `<span class="fav on" data-unfav="1" aria-label="Quitar de favoritos">♥</span>`)).join('')
+    : `<p class="empty">Aún no tienes favoritas.<br>Toca ♡ en cualquier emisora para guardarla aquí.</p>`;
+  updateUI();
+}
+favsEl.onclick = e => {
+  const r = e.target.closest('.row'); if (!r) return;
+  const s = favs.find(f => f.stationuuid === r.dataset.id); if (!s) return;
+  if (e.target.closest('[data-unfav]')) return toggleFav(s);
+  if (!started) { started = true; $('#start').classList.add('hidden'); }
+  toggle(s);
+};
+$('#npBtn').onclick = () => cur && toggle(cur);
+
+/* ===== Pestañas y feed ===== */
+function showTab(tab) {
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  feedEl.classList.toggle('hidden', tab !== 'feed');
+  favsEl.classList.toggle('hidden', tab !== 'favs');
+  $('#chips').classList.toggle('hidden', tab !== 'feed');
+  if (tab === 'favs') renderFavs();
+  if (tab === 'feed' && started && visibleId && (!cur || cur.stationuuid !== visibleId)) {
+    const s = stations.find(x => x.stationuuid === visibleId); s && play(s);
+  }
+  updateUI();
+}
+document.querySelectorAll('.tabs [data-tab]').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+feedEl.onclick = e => {
+  if (e.target.closest('[data-reset]')) return applyFilter({mood: 'top', genre: null, country: null, search: null});
+  const card = e.target.closest('.card.st'); if (!card) return;
+  const s = stations.find(x => x.stationuuid === card.dataset.id); if (!s) return;
+  if (e.target.closest('.play')) toggle(s);
+  else if (e.target.closest('.fav')) toggleFav(s);
+  else if (e.target.closest('.next')) next(card);
+};
+document.addEventListener('keydown', e => {
+  if (ov.className !== 'ov hidden' || feedEl.classList.contains('hidden')) return;
+  const c = visibleId && feedEl.querySelector(`[data-id="${CSS.escape(visibleId)}"]`);
+  if (e.key === 'ArrowDown' && c) { e.preventDefault(); next(c); }
+  if (e.key === ' ' && c) { e.preventDefault(); const s = stations.find(x => x.stationuuid === visibleId); s && toggle(s); }
+});
+
+function toast(t) {
+  document.querySelector('.toast')?.remove();
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d);
+  setTimeout(() => d.remove(), 2600);
+}
+
+$('#startBtn').onclick = start;
+renderChips(); refreshBanner(); loadMore(true);
+}
+</script>
+</body>
+</html>
