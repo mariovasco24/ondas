@@ -15,7 +15,7 @@ npm run serve     # sirve dist/ en local
 
 La app de Android se compila en GitHub Actions (`.github/workflows/android.yml`). Guía de publicación: [docs/PLAY_STORE.md](docs/PLAY_STORE.md).
 
-Cada push a `main` ejecuta las pruebas y publica `dist/` en GitHub Pages (`.github/workflows/deploy.yml`). En **Settings → Pages**, la fuente debe ser **GitHub Actions**.
+Cada push a `main` ejecuta las pruebas (`.github/workflows/deploy.yml`). La política de privacidad vive en el repo público [`onda-radio-legal`](https://github.com/mariovasco24/onda-radio-legal); `public/privacidad.html` es la copia de referencia.
 
 ## Arquitectura
 
@@ -64,4 +64,4 @@ Las frecuencias se ajustan en `AD_POLICY` (`src/config/app.config.ts`):
 
 - Capacitor 8 con `@capacitor-community/admob` (banner, intersticial y recompensado) y `@capgo/capacitor-media-session` (notificación, pantalla de bloqueo y reproducción con la pantalla apagada).
 - En la app no hay tarjetas de anuncio dentro del feed: el plugin de AdMob no ofrece anuncios nativos.
-- Política de privacidad: https://mariovasco24.github.io/ondas/privacidad.html
+- Política de privacidad: https://mariovasco24.github.io/onda-radio-legal/

@@ -81,7 +81,6 @@ async function bootstrap(): Promise<void> {
         version: APP_INFO.version,
         author: APP_INFO.author,
         contactEmail: APP_INFO.contactEmail,
-        repositoryUrl: APP_INFO.repositoryUrl,
         copyrightYear: APP_INFO.copyrightYear,
         privacyUrl: APP_INFO.privacyUrl,
       },

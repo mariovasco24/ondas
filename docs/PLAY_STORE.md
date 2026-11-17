@@ -38,7 +38,7 @@ El `versionCode` sube solo en cada ejecución.
 | --- | --- |
 | Tipo | App, gratis |
 | Categoría | Música y audio |
-| Política de privacidad | https://mariovasco24.github.io/ondas/privacidad.html |
+| Política de privacidad | https://mariovasco24.github.io/onda-radio-legal/ |
 | Acceso a la app | Todo disponible sin cuenta |
 | Anuncios | Sí |
 | Público objetivo | 18 años o más |

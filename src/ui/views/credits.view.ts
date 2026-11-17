@@ -5,7 +5,6 @@ export interface CreditsInfo {
   readonly version: string;
   readonly author: string;
   readonly contactEmail: string;
-  readonly repositoryUrl: string;
   readonly copyrightYear: number;
   readonly privacyUrl: string;
 }
@@ -96,7 +95,6 @@ export class CreditsView {
 
         <footer class="credits__footer muted">
           <p>© ${info.copyrightYear} ${e(info.author)}. Todos los derechos reservados.</p>
-          <p><a href="${e(info.repositoryUrl)}" target="_blank" rel="noopener noreferrer">Código fuente</a></p>
         </footer>
       </article>`;
   }

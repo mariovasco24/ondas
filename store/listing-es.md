@@ -41,5 +41,5 @@ Primera versión: feed de emisoras con swipe, filtros por mood, país y género,
 - Categoría: Música y audio
 - Etiquetas sugeridas: Radio, Música, Streaming
 - Correo de contacto: contacto@mariovasco.me
-- Sitio web: https://mariovasco24.github.io/ondas/
-- Política de privacidad: https://mariovasco24.github.io/ondas/privacidad.html
+- Sitio web: https://mariovasco24.github.io/onda-radio-legal/
+- Política de privacidad: https://mariovasco24.github.io/onda-radio-legal/
