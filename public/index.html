@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0e12">
+  <meta name="description" content="Ondas: escucha emisoras de radio de todo el mundo deslizando hacia arriba.">
+  <meta name="author" content="Mario David Vasco Villareal">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data:; media-src https: blob:; connect-src https:; worker-src blob:; base-uri 'self'; form-action 'none'">
+  <title>Ondas — Radio del mundo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" defer></script>
+  <script type="module" src="./js/main.js"></script>
+</head>
+<body>
+  <div id="start-screen" class="start-screen">
+    <div>
+      <h1>Ondas</h1>
+      <p>Miles de emisoras de todo el mundo. Desliza hacia arriba para cambiar de emisora.</p>
+      <button id="start-button" class="play-btn play-btn--big" type="button" aria-label="Encender la radio">▶</button>
+    </div>
+  </div>
+
+  <header class="top-bar">
+    <nav id="tabs" class="tabs" role="tablist" aria-label="Secciones">
+      <button class="tab" type="button" role="tab" data-tab="feed" aria-selected="true">Descubrir</button>
+      <button class="tab" type="button" role="tab" data-tab="favorites" aria-selected="false">Favoritos</button>
+      <button class="tab" type="button" role="tab" data-tab="credits" aria-selected="false">Créditos</button>
+      <button id="search-button" class="icon-btn tabs__search" type="button" aria-label="Buscar emisoras">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      </button>
+    </nav>
+    <div id="chips" class="chips" aria-label="Filtros"></div>
+  </header>
+
+  <main>
+    <div id="feed" class="feed" aria-live="polite"></div>
+    <section id="favorites" class="panel" hidden></section>
+    <section id="credits" class="panel" hidden></section>
+  </main>
+
+  <div id="now-playing" class="now-playing" hidden>
+    <b data-now-playing-name></b>
+    <button class="play-btn play-btn--small" type="button" data-now-playing-toggle aria-label="Reproducir o pausar">▶</button>
+  </div>
+
+  <footer id="banner" class="banner">
+    <div class="banner__slot" data-banner-slot>Banner · AdMob 320×50</div>
+    <span class="banner__note muted" data-banner-note hidden></span>
+    <button class="btn" type="button" data-banner-reward>🎁 2 h sin anuncios</button>
+  </footer>
+
+  <audio id="audio" preload="none"></audio>
+  <noscript>Ondas necesita JavaScript para funcionar.</noscript>
+</body>
+</html>

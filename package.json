@@ -1,0 +1,20 @@
+{
+  "name": "ondas",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Ondas: radio del mundo con feed tipo swipe.",
+  "author": "Mario David Vasco Villareal <contacto@mariovasco.me>",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "node scripts/clean.mjs build-test && tsc -p tsconfig.test.json && node --test \"build-test/tests/**/*.test.js\"",
+    "serve": "npx --yes serve dist"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "~6.0.3"
+  }
+}
