@@ -3,3 +3,10 @@ dist/
 build-test/
 *.log
 .DS_Store
+# Los proyectos nativos se generan en CI desde la plantilla + scripts/android-configure.mjs.
+android/
+ios/
+# Las llaves de firma NUNCA van al repositorio.
+*.jks
+*.keystore
+keystore.properties

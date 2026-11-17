@@ -1,7 +1,7 @@
 import type { Clock, KeyValueStore } from './ports.js';
 
 export interface AdPolicyConfig {
-  /** Un anuncio nativo cada N emisoras del feed. */
+  /** Un anuncio nativo cada N emisoras del feed (0 = sin anuncios en el feed). */
   readonly nativeEvery: number;
   /** Tiempo mínimo entre dos intersticiales. */
   readonly interstitialMinGapMs: number;
@@ -49,7 +49,7 @@ export class AdPolicy {
 
   /** Se llama por cada emisora añadida al feed; devuelve true si después va un anuncio nativo. */
   shouldInsertNativeAfterStation(): boolean {
-    if (this.isAdFree()) return false;
+    if (this.config.nativeEvery <= 0 || this.isAdFree()) return false;
     this.stationsSinceNative += 1;
     if (this.stationsSinceNative < this.config.nativeEvery) return false;
     this.stationsSinceNative = 0;

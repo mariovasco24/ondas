@@ -7,5 +7,5 @@
     "sourceMap": false
   },
   "include": ["src", "tests"],
-  "exclude": ["src/main.ts"]
+  "exclude": ["src/main.ts", "src/platform", "src/config/build-env.ts", "src/infrastructure/ads/admob-ad.provider.ts", "src/infrastructure/media/capacitor-media-session.integration.ts"]
 }

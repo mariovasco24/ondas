@@ -17,7 +17,10 @@ export class PlaybackService {
     private readonly player: AudioPlayer,
     private readonly tracker: PlayTracker,
     private readonly nowPlaying: NowPlayingIntegration,
-  ) {}
+  ) {
+    // Mantiene la notificación / pantalla de bloqueo al día con el estado real del audio.
+    player.subscribe((state) => nowPlaying.setPlaybackState(state));
+  }
 
   get current(): Station | null {
     return this.player.current;
@@ -47,6 +50,13 @@ export class PlaybackService {
     this.nowPlaying.show(station, {
       next: () => this.navigation.next(),
       previous: () => this.navigation.previous(),
+      play: () => {
+        const current = this.player.current;
+        if (current && !this.isActive) this.player.resume();
+      },
+      pause: () => {
+        if (this.isActive) this.player.pause();
+      },
     });
   }
 

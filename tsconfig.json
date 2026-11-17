@@ -6,8 +6,7 @@
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": [],
     "rootDir": "src",
-    "outDir": "dist/js",
-    "strict": true,
+        "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitOverride": true,
@@ -17,7 +16,6 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
-    "sourceMap": true,
     "skipLibCheck": true
   },
   "include": ["src"]

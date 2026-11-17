@@ -7,11 +7,12 @@ import type { Genre, Mood } from '../domain/filter.js';
 import type { PlaceholderAdOptions } from '../infrastructure/ads/placeholder-ad.provider.js';
 
 export const APP_INFO = {
-  name: 'Ondas',
-  version: '0.2.0',
+  name: 'Onda Radio',
+  version: '1.0.0',
   author: 'Mario David Vasco Villareal',
   contactEmail: 'contacto@mariovasco.me',
   repositoryUrl: 'https://github.com/mariovasco24/ondas',
+  privacyUrl: 'https://mariovasco24.github.io/ondas/privacidad.html',
   copyrightYear: 2026,
   locale: 'es',
   defaultCountry: 'CO',

@@ -2,6 +2,7 @@ import type { AdPolicy } from '../application/ad-policy.js';
 import type { FavoritesService } from '../application/favorites.service.js';
 import type { PlaybackService } from '../application/playback.service.js';
 import type {
+  BannerAdProvider,
   CountryRepository,
   FullScreenAdFormat,
   FullScreenAdResult,
@@ -33,6 +34,7 @@ export interface AppServices {
   readonly playback: PlaybackService;
   readonly adPolicy: AdPolicy;
   readonly fullScreenAds: FullScreenAdProvider;
+  readonly bannerAds: BannerAdProvider;
   readonly stations: StationRepository;
   readonly countries: CountryRepository;
   readonly countryNames: CountryNames;
@@ -73,6 +75,7 @@ export class AppController {
   private loading = false;
   /** Cambia en cada recarga del feed para descartar respuestas viejas. */
   private generation = 0;
+  private bannerShown: boolean | null = null;
   private readonly knownStations = new Map<string, Station>();
 
   private readonly feedView: FeedView;
@@ -390,7 +393,11 @@ export class AppController {
   }
 
   private refreshAdFree(): void {
-    const { adPolicy } = this.services;
-    this.banner.render(adPolicy.isAdFree() ? adPolicy.adFreeUntil : null);
+    const { adPolicy, bannerAds } = this.services;
+    const adFree = adPolicy.isAdFree();
+    this.banner.render(adFree ? adPolicy.adFreeUntil : null);
+    if (this.bannerShown === !adFree) return;
+    this.bannerShown = !adFree;
+    void (adFree ? bannerAds.hide() : bannerAds.show());
   }
 }

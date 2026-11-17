@@ -68,9 +68,18 @@ export interface NavigationHandlers {
   previous(): void;
 }
 
-/** Controles del sistema operativo (pantalla de bloqueo, auriculares, etc.). */
+export interface RemoteControlHandlers extends NavigationHandlers {
+  play(): void;
+  pause(): void;
+}
+
+/**
+ * Controles del sistema operativo (pantalla de bloqueo, notificación, auriculares).
+ * En Android también mantiene viva la reproducción con la pantalla apagada.
+ */
 export interface NowPlayingIntegration {
-  show(station: Station, handlers: NavigationHandlers): void;
+  show(station: Station, handlers: RemoteControlHandlers): void;
+  setPlaybackState(state: PlayerState): void;
 }
 
 // ---------- Anuncios ----------
@@ -81,7 +90,13 @@ export interface FullScreenAdResult {
   readonly completed: boolean;
 }
 
-/** Hoy: marcador de posición. En la app nativa: AdMob. La aplicación no nota la diferencia. */
+/** Web: marcador de posición. App nativa: AdMob. La aplicación no nota la diferencia. */
 export interface FullScreenAdProvider {
   show(format: FullScreenAdFormat): Promise<FullScreenAdResult>;
+}
+
+/** Banner fijo inferior. */
+export interface BannerAdProvider {
+  show(): Promise<void>;
+  hide(): Promise<void>;
 }

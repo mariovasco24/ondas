@@ -1,0 +1,9 @@
+{
+  "appId": "com.mariovasco.ondaradio",
+  "appName": "Onda Radio",
+  "webDir": "dist",
+  "backgroundColor": "#0d0e12",
+  "android": {
+    "allowMixedContent": false
+  }
+}

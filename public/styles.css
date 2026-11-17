@@ -1,4 +1,4 @@
-/* Ondas — estilos. Organización: tokens, base, layout, componentes, estados. */
+/* Onda Radio — estilos. Organización: tokens, base, layout, componentes, estados. */
 
 /* ---------- Tokens ---------- */
 :root {
@@ -181,3 +181,12 @@ a { color: var(--ink); text-underline-offset: 3px; }
 }
 /* Si el mini reproductor está visible, el aviso sube para no taparlo. */
 .now-playing:not([hidden]) ~ .toast { bottom: calc(var(--banner-h) + 86px); }
+
+/* ---------- App nativa (Android) ----------
+   El banner real de AdMob se dibuja encima de la página, abajo y centrado:
+   se le deja un espacio vacío de 50 px debajo de la fila del botón de recompensa. */
+.is-native { --banner-h: calc(118px + env(safe-area-inset-bottom)); }
+.is-native .banner { flex-wrap: wrap; align-content: flex-start; height: var(--banner-h); }
+.is-native .banner__slot { order: 2; flex: 0 0 100%; height: 50px; visibility: hidden; }
+.is-native .banner .btn, .is-native .banner__note { flex: 1; }
+.is-native:has(.banner__slot[hidden]) { --banner-h: calc(64px + env(safe-area-inset-bottom)); }

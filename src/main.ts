@@ -1,7 +1,7 @@
 /**
  * Composition root: el único lugar donde se crean las clases concretas
  * y se conectan entre sí. Para pasar a la app nativa basta con cambiar
- * implementaciones aquí (p. ej. PlaceholderAdProvider → AdMobAdProvider).
+ * implementaciones (ver platform/create-platform.ts).
  */
 import { AdPolicy } from './application/ad-policy.js';
 import { FavoritesService } from './application/favorites.service.js';
@@ -18,9 +18,7 @@ import {
   PLACEHOLDER_ADS,
   RADIO_BROWSER_MIRRORS,
 } from './config/app.config.js';
-import { PlaceholderAdProvider } from './infrastructure/ads/placeholder-ad.provider.js';
 import { HtmlAudioPlayer } from './infrastructure/audio/html-audio.player.js';
-import { MediaSessionIntegration } from './infrastructure/media/media-session.integration.js';
 import { RadioBrowserClient } from './infrastructure/radio-browser/radio-browser.client.js';
 import {
   RadioBrowserCountryRepository,
@@ -28,20 +26,35 @@ import {
 } from './infrastructure/radio-browser/radio-browser.repositories.js';
 import { LocalStorageStore } from './infrastructure/storage/local-storage.store.js';
 import { systemClock } from './infrastructure/system/system.clock.js';
+import type { Station } from './domain/station.js';
 import { CountryNames, countryFromLocale } from './shared/format.js';
+import { createPlatform } from './platform/create-platform.js';
 import { AppController } from './ui/app.controller.js';
 import { requireElement } from './ui/dom.js';
 
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   const store = new LocalStorageStore('ondas.');
   const countryNames = new CountryNames(APP_INFO.locale);
+  const describeStation = (s: Station): string => countryNames.of(s.countryCode);
+
+  const platform = await createPlatform({
+    appName: APP_INFO.name,
+    describeStation,
+    overlayHost: document.body,
+    placeholderAds: PLACEHOLDER_ADS,
+  });
+  document.documentElement.classList.toggle('is-native', platform.isNative);
 
   const client = new RadioBrowserClient(RADIO_BROWSER_MIRRORS);
   const stations = new RadioBrowserStationRepository(client);
   const countries = new RadioBrowserCountryRepository(client, MIN_STATIONS_PER_COUNTRY);
 
   const player = new HtmlAudioPlayer(requireElement<HTMLAudioElement>('#audio'));
-  const nowPlaying = new MediaSessionIntegration(APP_INFO.name, (s) => countryNames.of(s.countryCode));
+  const adPolicy = new AdPolicy(
+    platform.feedAdsSupported ? AD_POLICY : { ...AD_POLICY, nativeEvery: 0 },
+    systemClock,
+    store,
+  );
 
   const controller = new AppController(
     {
@@ -52,9 +65,10 @@ function bootstrap(): void {
         blockedStationIds: new Set(BLOCKED_STATION_IDS),
       }),
       favorites: new FavoritesService(store),
-      playback: new PlaybackService(player, stations, nowPlaying),
-      adPolicy: new AdPolicy(AD_POLICY, systemClock, store),
-      fullScreenAds: new PlaceholderAdProvider(document.body, PLACEHOLDER_ADS),
+      playback: new PlaybackService(player, stations, platform.nowPlaying),
+      adPolicy,
+      fullScreenAds: platform.fullScreenAds,
+      bannerAds: platform.bannerAds,
       stations,
       countries,
       countryNames,
@@ -69,6 +83,7 @@ function bootstrap(): void {
         contactEmail: APP_INFO.contactEmail,
         repositoryUrl: APP_INFO.repositoryUrl,
         copyrightYear: APP_INFO.copyrightYear,
+        privacyUrl: APP_INFO.privacyUrl,
       },
     },
     {
@@ -89,4 +104,4 @@ function bootstrap(): void {
   controller.start();
 }
 
-bootstrap();
+void bootstrap();

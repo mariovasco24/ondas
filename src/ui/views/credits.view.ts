@@ -7,6 +7,7 @@ export interface CreditsInfo {
   readonly contactEmail: string;
   readonly repositoryUrl: string;
   readonly copyrightYear: number;
+  readonly privacyUrl: string;
 }
 
 interface ThirdPartyCredit {
@@ -22,6 +23,18 @@ const THIRD_PARTY: readonly ThirdPartyCredit[] = [
     url: 'https://www.radio-browser.info',
     role: 'Directorio comunitario de emisoras (datos de dominio público)',
     license: 'API libre y gratuita',
+  },
+  {
+    name: 'Google AdMob',
+    url: 'https://admob.google.com',
+    role: 'Anuncios en la app para Android',
+    license: 'Servicio de Google',
+  },
+  {
+    name: 'Capacitor',
+    url: 'https://capacitorjs.com',
+    role: 'Empaquetado de la app para Android',
+    license: 'MIT',
   },
   {
     name: 'hls.js',
@@ -77,7 +90,8 @@ export class CreditsView {
         <section>
           <h3>Privacidad</h3>
           <p>Tus favoritos se guardan solo en este dispositivo. No pedimos cuentas ni datos personales.</p>
-          <p>Como en cualquier navegador, el servidor de cada emisora recibe tu dirección IP al conectarte. Los anuncios, cuando estén activos, los sirve un proveedor externo con su propia política de privacidad.</p>
+          <p>Como en cualquier navegador, el servidor de cada emisora recibe tu dirección IP al conectarte. En la app, los anuncios los sirve Google AdMob, que puede usar el identificador de publicidad de tu dispositivo.</p>
+          <p><a href="${e(info.privacyUrl)}" target="_blank" rel="noopener noreferrer">Política de privacidad completa</a></p>
         </section>
 
         <footer class="credits__footer muted">
